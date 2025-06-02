@@ -1,0 +1,13 @@
+{
+  "name": "wpautoblog-license-validation",
+  "version": "1.0.0",
+  "description": "License validation handler for WP Auto Blogger",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "zip -r deployment.zip index.js node_modules"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1498.0"
+  }
+}
