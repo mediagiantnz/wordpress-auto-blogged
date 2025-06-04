@@ -61,7 +61,7 @@ resource "aws_lambda_function" "wpautoblog_license_activation" {
   function_name    = "wpautoblog-license-activation"
   role            = aws_iam_role.wpautoblog_lambda_role.arn
   handler         = "index.handler"
-  runtime         = "nodejs18.x"
+  runtime         = "nodejs20.x"
   timeout         = 30
 
   environment {
@@ -82,7 +82,7 @@ resource "aws_lambda_function" "wpautoblog_license_validation" {
   function_name    = "wpautoblog-license-validation"
   role            = aws_iam_role.wpautoblog_lambda_role.arn
   handler         = "index.handler"
-  runtime         = "nodejs18.x"
+  runtime         = "nodejs20.x"
   timeout         = 30
 
   environment {
