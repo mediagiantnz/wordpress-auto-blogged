@@ -13,6 +13,20 @@ class WPAB_Schedule_Handler {
 
         // WP-Cron hook: actual publishing + re-schedule
         add_action( 'wpab_publish_scheduled_post', array( $this, 'publish_scheduled_post' ) );
+        
+        // Debug action for testing
+        add_action( 'admin_init', array( $this, 'maybe_run_test_cron' ) );
+    }
+
+    /**
+     * Debug function to test cron manually
+     */
+    public function maybe_run_test_cron() {
+        if ( isset( $_GET['wpab_test_cron'] ) && $_GET['wpab_test_cron'] === '1' && current_user_can( 'manage_options' ) ) {
+            error_log('[WPAB TEST CRON] Manually triggering publish_scheduled_post');
+            $this->publish_scheduled_post();
+            wp_die('Cron test completed. Check your error logs.');
+        }
     }
 
     /**
@@ -305,6 +319,13 @@ class WPAB_Schedule_Handler {
     public function publish_scheduled_post() {
         error_log('[publish_scheduled_post] Fired. Will publish topics and schedule next day');
 
+        // Check if auto-publish is enabled
+        $auto_publish = get_option('wpab_auto_publish', false);
+        if (!$auto_publish) {
+            error_log('[publish_scheduled_post] Auto-publish is disabled, exiting');
+            return;
+        }
+
         // Load schedule
         $schedule = get_option('wpab_schedule_settings', array(
             'frequency'  => 'daily',
@@ -365,6 +386,7 @@ class WPAB_Schedule_Handler {
         }
 
         // Now re-schedule next random single event for tomorrow
+        error_log('[publish_scheduled_post] Completed. Re-scheduling next event.');
         $this->schedule_next_event();
     }
 }
