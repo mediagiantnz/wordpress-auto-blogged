@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Auto Blogger
  * Description: Automatically generates blog content using AI with multi-provider support (OpenAI, Claude, Gemini).
- * Version: 2.0.10
+ * Version: 2.0.11
  * Author: WP Auto Blogger Team
  * Requires at least: 5.0
  * Requires PHP: 7.2

@@ -261,10 +261,11 @@ class WPAB_Email_Handler {
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background-color: #f4f4f4; padding: 20px; text-align: center; }
         .content { padding: 20px; background-color: #fff; }
-        .button { display: inline-block; padding: 12px 24px; margin: 10px 5px; text-decoration: none; border-radius: 5px; font-weight: bold; color: #ffffff !important; }
+        .button { display: inline-block; padding: 12px 24px; margin: 10px 5px; text-decoration: none; border-radius: 5px; font-weight: bold; color: #ffffff !important; text-align: center; }
         .approve-button { background-color: #28a745; color: #ffffff !important; }
         .reject-button { background-color: #dc3545; color: #ffffff !important; }
         .edit-button { background-color: #007bff; color: #ffffff !important; }
+        .button:hover { opacity: 0.9; text-decoration: none; }
         .notice { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 4px; margin: 20px 0; }
         .footer { background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; }
         .excerpt { background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0; }

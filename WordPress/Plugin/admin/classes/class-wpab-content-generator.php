@@ -131,8 +131,9 @@ class WPAB_Content_Generator {
         // Use default post status from settings, or 'publish' if not set
         $default_status = isset( $options['default_post_status'] ) ? $options['default_post_status'] : 'publish';
         
-        // If approval is required, override to draft
-        $post_status = $require_approval ? 'draft' : $default_status;
+        // If approval is required AND approval emails are enabled, override to draft
+        $send_approval_emails = isset( $options['send_approval_emails'] ) && $options['send_approval_emails'] == '1';
+        $post_status = ( $require_approval && $send_approval_emails ) ? 'draft' : $default_status;
         
         $post_id = wp_insert_post( array(
             'post_title'    => $safe_title,
