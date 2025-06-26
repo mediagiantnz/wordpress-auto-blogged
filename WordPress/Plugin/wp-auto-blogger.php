@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Auto Blogger
  * Description: Automatically generates blog content using AI with multi-provider support (OpenAI, Claude, Gemini).
- * Version: 2.0.12
+ * Version: 2.0.13
  * Author: WP Auto Blogger Team
  * Requires at least: 5.0
  * Requires PHP: 7.2
@@ -32,7 +32,7 @@ if (is_admin() && (
 }
 
 // Define constants
-define( 'WPAB_VERSION', '2.0.10' );
+define( 'WPAB_VERSION', '2.0.13' );
 define( 'WPAB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPAB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -98,8 +98,13 @@ new WPAB_Approval_Handler();
 
 // Initialize public functionality for admin notices
 require_once WPAB_PLUGIN_DIR . 'public/class-wpab-public.php';
+require_once WPAB_PLUGIN_DIR . 'includes/class-wpab-rest-api.php';
+
 $wpab_public = new WPAB_Public();
 add_action( 'admin_notices', array( $wpab_public, 'add_admin_notices' ) );
+
+// Initialize REST API
+WPAB_REST_API::init();
 
 
 /**

@@ -115,6 +115,16 @@ class WPAB_Admin {
             'wpab-schedule',
             array( $this->schedule_handler, 'display_schedule_page' )
         );
+        
+        // Add submenu for API Settings
+        add_submenu_page(
+            'wpab',
+            'API Settings',
+            'API Settings',
+            'manage_options',
+            'wpab-api-settings',
+            array( $this, 'display_api_settings_page' )
+        );
     }
 
     /**
@@ -204,6 +214,13 @@ class WPAB_Admin {
     public function display_content_calendar_page() {
         include_once plugin_dir_path( __FILE__ ) . '../partials/wpab-content-calendar.php';
     }
+    
+    /**
+     * Display the API settings page.
+     */
+    public function display_api_settings_page() {
+        include_once plugin_dir_path( __FILE__ ) . '../views/api-settings.php';
+    }
 
     /**
      * Enqueue admin scripts and styles.
@@ -214,6 +231,7 @@ class WPAB_Admin {
             'toplevel_page_wpab' !== $hook
             && 'wpab_page_wpab-content-calendar' !== $hook
             && 'wpab_page_wpab-schedule' !== $hook
+            && 'wpab_page_wpab-api-settings' !== $hook
         ) {
             return;
         }
