@@ -1,0 +1,11 @@
+{
+  "name": "wpab-blog-processor",
+  "version": "1.0.0",
+  "description": "Process blog generation with WordPress validation",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1404.0",
+    "@anthropic-ai/sdk": "^0.20.1",
+    "openai": "^4.47.1"
+  }
+}

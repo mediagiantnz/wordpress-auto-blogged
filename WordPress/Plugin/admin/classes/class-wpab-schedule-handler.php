@@ -13,9 +13,12 @@ class WPAB_Schedule_Handler {
 
         // WP-Cron hook: actual publishing + re-schedule
         add_action( 'wpab_publish_scheduled_post', array( $this, 'publish_scheduled_post' ) );
-        
+
         // Debug action for testing
         add_action( 'admin_init', array( $this, 'maybe_run_test_cron' ) );
+        
+        // Debug action to check if cron is working
+        add_action( 'admin_init', array( $this, 'maybe_debug_cron' ) );
     }
 
     /**
@@ -30,6 +33,27 @@ class WPAB_Schedule_Handler {
     }
 
     /**
+     * Debug function to check cron status
+     */
+    public function maybe_debug_cron() {
+        if ( isset( $_GET['wpab_debug_cron'] ) && $_GET['wpab_debug_cron'] === '1' && current_user_can( 'manage_options' ) ) {
+            $timestamp = wp_next_scheduled('wpab_publish_scheduled_post');
+            $auto_publish = get_option('wpab_auto_publish', false);
+            $topics = get_option('wpab_topics', array());
+            $approved_topics = array_filter($topics, function($t) {
+                return isset($t['status']) && $t['status'] === 'approved';
+            });
+            
+            echo '<h3>WPAB Cron Debug Info:</h3>';
+            echo '<p>Auto publish enabled: ' . ($auto_publish ? 'Yes' : 'No') . '</p>';
+            echo '<p>Next scheduled: ' . ($timestamp ? date('Y-m-d H:i:s', $timestamp) : 'None') . '</p>';
+            echo '<p>Approved topics: ' . count($approved_topics) . '</p>';
+            echo '<p>WordPress cron enabled: ' . (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON ? 'No (disabled)' : 'Yes') . '</p>';
+            wp_die();
+        }
+    }
+
+    /**
      * Display the Schedule Settings Page
      */
     public function display_schedule_page() {
@@ -38,16 +62,19 @@ class WPAB_Schedule_Handler {
             'frequency'  => 'daily',
             'number'     => 1,
             'start_hour' => '09', // default 9 AM
+            'end_hour'   => '17', // default 5 PM
         ) );
 
-        // We'll auto-set end_hour as start+3 (mod 24)
-        $start_val = (int) $schedule['start_hour'];
-        $end_val   = ($start_val + 3) % 24;
-        $schedule['end_hour'] = str_pad($end_val, 2, '0', STR_PAD_LEFT);
+        // Ensure we have an end_hour, fallback to start+3 for backwards compatibility
+        if (!isset($schedule['end_hour'])) {
+            $start_val = (int) $schedule['start_hour'];
+            $end_val   = ($start_val + 3) % 24;
+            $schedule['end_hour'] = str_pad($end_val, 2, '0', STR_PAD_LEFT);
+        }
 
         ?>
         <div class="wrap">
-            <h1>Schedule Settings (Random Post Time in a 3-Hour Window)</h1>
+            <h1>Schedule Settings</h1>
             <form method="post" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>">
                 <?php wp_nonce_field( 'wpab_save_schedule', 'wpab_schedule_nonce' ); ?>
                 <input type="hidden" name="action" value="wpab_save_schedule">
@@ -73,14 +100,22 @@ class WPAB_Schedule_Handler {
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row"><label for="publish_start_hour">Publish Start Hour</label></th>
+                        <th scope="row"><label for="publish_start_hour">Publishing Time Window</label></th>
                         <td>
-                            <select id="publish_start_hour" name="publish_start_hour" required>
+                            <label for="publish_start_hour">From:</label>
+                            <select id="publish_start_hour" name="publish_start_hour" required style="margin-right: 10px;">
                                 <?php $this->render_hour_options($schedule['start_hour']); ?>
                             </select>
+                            
+                            <label for="publish_end_hour">To:</label>
+                            <select id="publish_end_hour" name="publish_end_hour" required>
+                                <?php $this->render_hour_options($schedule['end_hour']); ?>
+                            </select>
+                            
                             <p class="description">
-                                We auto-add +3 hours to form a 3-hour window. e.g. If 09, window is 09–12.
-                                The plugin will pick a random hour/minute in that window each day.
+                                Posts will be published at a random time between these hours. 
+                                For example: 9 AM to 5 PM might publish at 2:15 PM today, 11:30 AM tomorrow, etc.
+                                This helps make the posting appear more natural and less automated.
                             </p>
                         </td>
                     </tr>
@@ -100,6 +135,14 @@ class WPAB_Schedule_Handler {
             <hr>
             <h2>Schedule Overview</h2>
             <?php $this->display_schedule_overview(); ?>
+            
+            <hr>
+            <h2>Debug Tools</h2>
+            <p>
+                <a href="<?php echo admin_url('admin.php?page=wpab-schedule&wpab_debug_cron=1'); ?>" class="button">Debug Cron Status</a>
+                <a href="<?php echo admin_url('admin.php?page=wpab-schedule&wpab_test_cron=1'); ?>" class="button" onclick="return confirm('This will immediately run the publishing process. Continue?')">Test Cron Now</a>
+            </p>
+            <p class="description">Use these tools to test if the scheduling system is working properly.</p>
         </div>
         <?php
     }
@@ -134,19 +177,26 @@ class WPAB_Schedule_Handler {
         $frequency  = isset($_POST['frequency'])          ? sanitize_text_field($_POST['frequency']) : 'daily';
         $number     = isset($_POST['number'])             ? absint($_POST['number']) : 1;
         $start_hour = isset($_POST['publish_start_hour']) ? sanitize_text_field($_POST['publish_start_hour']) : '09';
+        $end_hour   = isset($_POST['publish_end_hour'])   ? sanitize_text_field($_POST['publish_end_hour']) : '17';
         $auto_publish = isset($_POST['auto_publish']) && $_POST['auto_publish'] == '1';
 
-        // Force a 3-hour window => end_hour
+        // Validate time window
         $start_val = (int)$start_hour;
-        $end_val   = ($start_val + 3) % 24;
-        $end_str   = str_pad($end_val, 2, '0', STR_PAD_LEFT);
+        $end_val   = (int)$end_hour;
+        
+        // If end time is before start time, assume it's next day (e.g., 22:00 to 06:00)
+        if ($end_val <= $start_val) {
+            // For now, let's just ensure end is after start for simplicity
+            $end_val = ($start_val + 1) % 24;
+            $end_hour = str_pad($end_val, 2, '0', STR_PAD_LEFT);
+        }
 
         // store
         update_option('wpab_schedule_settings', array(
             'frequency'  => $frequency,
             'number'     => $number,
             'start_hour' => $start_hour,
-            'end_hour'   => $end_str,
+            'end_hour'   => $end_hour,
         ));
         update_option('wpab_auto_publish', $auto_publish);
 
@@ -166,7 +216,7 @@ class WPAB_Schedule_Handler {
             'frequency'  => 'daily',
             'number'     => 1,
             'start_hour' => '09',
-            'end_hour'   => '12',
+            'end_hour'   => '17',
         ));
         $approved_topics = get_option('wpab_topics', array());
         $approved_topics = array_filter($approved_topics, function($t){
@@ -214,7 +264,9 @@ class WPAB_Schedule_Handler {
                     <?php
                     $start_str = DateTime::createFromFormat('H',$schedule['start_hour'])->format('g A');
                     $end_str   = DateTime::createFromFormat('H',$schedule['end_hour'])->format('g A');
-                    echo esc_html("$start_str to $end_str (3 hours)");
+                    $hours_diff = (int)$schedule['end_hour'] - (int)$schedule['start_hour'];
+                    if ($hours_diff <= 0) $hours_diff = 1; // Fallback for invalid ranges
+                    echo esc_html("$start_str to $end_str ({$hours_diff} hours)");
                     ?>
                 </td>
             </tr>
@@ -259,6 +311,7 @@ class WPAB_Schedule_Handler {
     private function schedule_next_event() {
         $auto_publish = get_option('wpab_auto_publish', false);
         if( ! $auto_publish ) {
+            error_log('[schedule_next_event] Auto publish is disabled, not scheduling');
             return;
         }
 
@@ -266,18 +319,25 @@ class WPAB_Schedule_Handler {
             'frequency'  => 'daily',
             'number'     => 1,
             'start_hour' => '09',
-            'end_hour'   => '12',
+            'end_hour'   => '17',
         ));
 
-        // If freq != daily, we fallback or do your custom logic
-        // We'll just do daily single events for demonstration
         $start_val = (int)$schedule['start_hour'];
         $end_val   = (int)$schedule['end_hour'];
 
-        // We'll pick a random hour in [start_val..end_val-1], random minute 0..59
-        // If user picks 09..12 => hours are [9..11]
-        $random_hour = rand($start_val, max($start_val, $end_val-1));
-        $random_min  = rand(0,59);
+        // Handle case where end time is same or before start time
+        if ($end_val <= $start_val) {
+            $end_val = $start_val + 1; // Default to 1 hour window
+        }
+
+        // Calculate total minutes in the time window for more precise randomization
+        $start_minutes = $start_val * 60; // Convert hours to minutes
+        $end_minutes = $end_val * 60;
+        
+        // Pick random minute within the window
+        $random_total_minutes = rand($start_minutes, $end_minutes - 1);
+        $random_hour = intval($random_total_minutes / 60);
+        $random_min = $random_total_minutes % 60;
 
         $tz_string = get_option('timezone_string') ?: 'UTC';
         $tz = new DateTimeZone($tz_string);

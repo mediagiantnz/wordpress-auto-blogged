@@ -1,0 +1,9 @@
+{
+  "name": "wpab-job-status",
+  "version": "1.0.0",
+  "description": "Check job status for blog generation",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1404.0"
+  }
+}

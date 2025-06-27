@@ -1,0 +1,42 @@
+version: 1
+backend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies for Lambda functions"
+        - cd src/backend/lambda/content && npm install && cd ../../../..
+        - cd src/backend/lambda/sites && npm install && cd ../../../..
+        - cd src/backend/lambda/topics && npm install && cd ../../../..
+        - cd src/backend/lambda/schedules && npm install && cd ../../../..
+        - cd src/backend/lambda/settings && npm install && cd ../../../..
+        - cd src/backend/lambda/ai-providers && npm install && cd ../../../..
+        - cd src/backend/lambda/auth && npm install && cd ../../../..
+        - cd src/backend/lambda/crawler && npm install && cd ../../../..
+    build:
+      commands:
+        - echo "Deploying backend changes with Amplify Push"
+        - '# Install amplify CLI'
+        - npm install -g @aws-amplify/cli@latest
+        - '# Configure AWS credentials using Amplify service role'
+        - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+        - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+        - export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
+        - '# Pull amplify backend environment'
+        - amplify pull --yes
+        - '# Push backend changes'
+        - amplify push --yes
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: build
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*

@@ -64,7 +64,6 @@ class WPAB_Admin {
 
         // Schedule Handling
         $this->schedule_handler = new WPAB_Schedule_Handler();
-        add_action( 'wpab_publish_scheduled_post', array( $this->schedule_handler, 'publish_scheduled_post' ) );
         
         // Email Handling
         $this->email_handler = new WPAB_Email_Handler();
